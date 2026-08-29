@@ -1,0 +1,42 @@
+{
+  "thinker": {
+    "vocab_size": 300,
+    "context_length": 128,
+    "model_dim": 16,
+    "ffn_dim": 32,
+    "num_attention_heads": 4,
+    "num_key_value_heads": 2,
+    "head_dim": 4,
+    "conv_kernel_size": 3,
+    "norm_eps": 1e-05,
+    "rope_theta": 1000000.0,
+    "layer_schedule": ["conv", "attention"]
+  },
+  "audio": {
+    "sample_rate": 24000,
+    "channels": 1,
+    "frame_size": 8,
+    "hidden_dim": 16,
+    "latent_dim": 8,
+    "temporal_kernel_size": 3,
+    "num_codebooks": 2,
+    "codebook_size": 16,
+    "commitment_weight": 0.25
+  },
+  "video": {
+    "input_channels": 3,
+    "patch_size": 2,
+    "spatial_merge_size": 2,
+    "vision_dim": 8,
+    "resampler_tokens": 4,
+    "resampler_dim": 8,
+    "resampler_heads": 2,
+    "model_dim": 16
+  },
+  "talker": {
+    "hidden_dim": 12,
+    "num_layers": 2,
+    "temporal_kernel_size": 3
+  },
+  "time_scale_seconds": 10.0
+}

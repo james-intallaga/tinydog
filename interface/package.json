@@ -1,0 +1,34 @@
+{
+  "name": "interface",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "sync-vad-assets": "node scripts/sync-vad-assets.mjs",
+    "predev": "npm run sync-vad-assets",
+    "dev": "next dev --hostname 127.0.0.1",
+    "prebuild": "npm run sync-vad-assets",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1",
+    "lint": "eslint",
+    "test": "node scripts/run-pure-tests.mjs"
+  },
+  "dependencies": {
+    "@ricky0123/vad-web": "^0.0.30",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "geist": "1.7.2",
+    "lucide-react": "^1.34.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "typescript": "^5"
+  },
+  "devDependencies": {
+    "eslint": "^9",
+    "eslint-config-next": "16.3.2"
+  }
+}

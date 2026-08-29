@@ -1,0 +1,9 @@
+{
+  "vocab_size": 264,
+  "context_length": 512,
+  "num_layers": 14,
+  "model_dim": 768,
+  "num_heads": 12,
+  "ffn_dim": 2048,
+  "norm_eps": 1e-5
+}

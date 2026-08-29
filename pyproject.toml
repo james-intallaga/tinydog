@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mini-arithmetic"
+version = "0.1.0"
+description = "Private local scratch models that learn through conversation on MLX or PyTorch"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+dependencies = [
+  "cryptography>=45,<51",
+  "numpy>=1.26",
+  "safetensors>=0.5,<1",
+  "tokenizers>=0.22,<0.23",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+# Compute engines are deliberately optional. The bootstrap installs exactly
+# one; installing the source on Windows/Linux must never try to resolve MLX.
+mlx = [
+  "mlx>=0.32,<0.33; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+torch = ["torch>=2.4,<3"]
+realtime = [
+  "aiohttp>=3.14,<3.15",
+  "aiortc>=1.15,<1.16",
+  "av>=17,<18",
+]
+
+[project.scripts]
+mlm-train = "mini_arithmetic.train:main"
+mlm-evaluate = "mini_arithmetic.evaluate:main"
+mlm-generate = "mini_arithmetic.generate:main"
+mlm-chat = "mini_arithmetic.chat:main"
+mlm-serve = "mini_arithmetic.serve:main"
+mlm-hybrid-train = "mini_arithmetic.hybrid_train:main"
+mlm-build-tokenizer = "mini_arithmetic.scratch_tokenizer:main"
+mlm-prepare-data = "mini_arithmetic.prepare_data:main"
+mlm-realtime = "mini_arithmetic.realtime_gateway:main"
+mlm-native-train = "mini_arithmetic.native_train:main"
+mlm-native-prepare = "mini_arithmetic.native_prepare:main"
+mlm-community-updates = "mini_arithmetic.community_updates:main"
+mlm-community-client = "mini_arithmetic.community_client:main"
+mlm-community-release = "mini_arithmetic.community_release:main"
+mlm-foundation = "mini_arithmetic.foundation_release:main"
+tinydog = "mini_arithmetic.bootstrap:main"
+tinydog-device = "mini_arithmetic.portable:main"
+tinydog-foundation-train = "mini_arithmetic.torch_foundation_train:main"
+tinydog-foundation-init = "mini_arithmetic.torch_foundation_train:init_main"
+tinydog-foundation-export = "mini_arithmetic.torch_foundation_train:export_main"
+tinydog-serve = "mini_arithmetic.portable_serve:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

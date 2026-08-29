@@ -1,0 +1,51 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+.DS_Store
+*.log
+*.tmp
+
+# Local settings can contain private paths, provider keys, or machine choices.
+.env*
+!.env.example
+.tinydog-setup.json
+
+# Conversations, generated models, training corpora, and checkpoints stay local.
+data/*
+!data/.gitkeep
+artifacts/
+trained-models/
+releases/
+outgoing/
+checkpoints/*
+!checkpoints/.gitkeep
+
+# Defense in depth for custom local paths chosen outside the defaults above.
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Never publish private signing material accidentally, even outside checkpoints/.
+*.key
+*.pem
+*.p12
+*.pfx

@@ -1,0 +1,6 @@
+:root { --paper: #f7f3ec; --ink: #30251d; --muted: #75685d; --line: #e3dbd1; --accent: #bd7440; }
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { overflow: hidden; background: var(--paper); color: var(--ink); font-family: var(--font-geist-sans), Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; }
+::selection { background: #e5d7ca; }

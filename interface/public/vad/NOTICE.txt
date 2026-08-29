@@ -1,0 +1,5 @@
+Silero VAD model: https://github.com/snakers4/silero-vad (MIT)
+Browser integration: https://github.com/ricky0123/vad (ISC)
+ONNX Runtime: https://github.com/microsoft/onnxruntime (MIT)
+Complete permission notices: LICENSES.txt
+These files are a replaceable microphone gate and are not MLM parameters.
