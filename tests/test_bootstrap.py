@@ -20,6 +20,7 @@ from mini_arithmetic.bootstrap import (
     _resolve_setup_backend,
     _runtime_environment,
     _setup_fingerprint,
+    _venv_python,
     build_setup_plan,
     build_start_commands,
     erase_personal_learning,
@@ -51,6 +52,7 @@ def test_services_launch_and_stop_as_owned_process_trees(monkeypatch) -> None:
     monkeypatch.setattr(
         "mini_arithmetic.bootstrap.os.killpg",
         lambda process_id, sent_signal: requested.append((process_id, sent_signal)),
+        raising=False,
     )
     _request_process_tree_stop(_RunningProcess(), windows=False)  # type: ignore[arg-type]
     assert requested == [(4242, 15)]
@@ -341,8 +343,9 @@ def test_realtime_local_configuration_is_forwarded() -> None:
 
 
 def test_setup_marker_becomes_stale_when_dependencies_change(tmp_path: Path) -> None:
-    (tmp_path / ".venv" / "bin").mkdir(parents=True)
-    (tmp_path / ".venv" / "bin" / "python").touch()
+    venv_python = _venv_python(tmp_path)
+    venv_python.parent.mkdir(parents=True)
+    venv_python.touch()
     (tmp_path / "interface").mkdir()
     (tmp_path / "pyproject.toml").write_text("first", encoding="utf-8")
     marker = _setup_fingerprint(tmp_path, "torch")
@@ -354,8 +357,9 @@ def test_setup_marker_becomes_stale_when_dependencies_change(tmp_path: Path) -> 
 
 
 def test_no_ui_setup_is_reused_only_for_no_ui_start(tmp_path: Path) -> None:
-    (tmp_path / ".venv" / "bin").mkdir(parents=True)
-    (tmp_path / ".venv" / "bin" / "python").touch()
+    venv_python = _venv_python(tmp_path)
+    venv_python.parent.mkdir(parents=True)
+    venv_python.touch()
     (tmp_path / "interface").mkdir()
     marker = _setup_fingerprint(tmp_path, "torch", ui_installed=False)
     (tmp_path / ".tinydog-setup.json").write_text(json.dumps(marker), encoding="utf-8")
@@ -365,8 +369,9 @@ def test_no_ui_setup_is_reused_only_for_no_ui_start(tmp_path: Path) -> None:
 
 
 def test_text_only_mlx_setup_is_reused_only_without_realtime(tmp_path: Path) -> None:
-    (tmp_path / ".venv" / "bin").mkdir(parents=True)
-    (tmp_path / ".venv" / "bin" / "python").touch()
+    venv_python = _venv_python(tmp_path)
+    venv_python.parent.mkdir(parents=True)
+    venv_python.touch()
     (tmp_path / "interface").mkdir()
     marker = _setup_fingerprint(
         tmp_path, "mlx", ui_installed=True, realtime_installed=False

@@ -156,7 +156,11 @@ def _fsync_bundle_tree(root: Path) -> None:
             continue
         if not stat.S_ISREG(details.st_mode):
             raise PortableBundleError("portable model staging contains a special file")
-        flags = os.O_RDONLY
+        # Windows' os.fsync delegates to the CRT commit call, which rejects a
+        # descriptor opened read-only. These are private staging files that we
+        # created, so opening them read/write is safe and preserves the same
+        # pre-publication durability boundary on every supported platform.
+        flags = os.O_RDWR if os.name == "nt" else os.O_RDONLY
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
         descriptor = os.open(path, flags)
