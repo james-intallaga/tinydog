@@ -13,8 +13,10 @@ exit /b 1
 
 :run_py
 py -3 "%BOOTSTRAP%" %*
-exit /b
+set "TINYDOG_EXIT=%ERRORLEVEL%"
+exit /b %TINYDOG_EXIT%
 
 :run_python
 python "%BOOTSTRAP%" %*
-exit /b
+set "TINYDOG_EXIT=%ERRORLEVEL%"
+exit /b %TINYDOG_EXIT%

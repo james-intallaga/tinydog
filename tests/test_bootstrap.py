@@ -127,6 +127,15 @@ def test_local_screen_requires_node_22_13_or_newer(
     assert _node_version_supported(reported) is supported
 
 
+def test_windows_launcher_explicitly_propagates_child_exit_codes() -> None:
+    launcher = (Path(__file__).resolve().parents[1] / "tinydog.cmd").read_text(
+        encoding="utf-8"
+    )
+
+    assert launcher.count('set "TINYDOG_EXIT=%ERRORLEVEL%"') == 2
+    assert launcher.count("exit /b %TINYDOG_EXIT%") == 2
+
+
 def test_setup_plan_installs_only_mlx_bundle_on_apple_path(tmp_path: Path) -> None:
     plan = build_setup_plan(
         tmp_path,
