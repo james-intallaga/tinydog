@@ -13,7 +13,7 @@ dependencies = [
   "cryptography>=45,<51",
   "numpy>=1.26",
   "safetensors>=0.5,<1",
-  "tokenizers>=0.22,<0.23",
+  "tokenizers>=0.22,<0.24",
 ]
 
 [project.optional-dependencies]
