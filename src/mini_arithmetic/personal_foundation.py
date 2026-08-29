@@ -105,7 +105,10 @@ def personal_foundation_bundle_sha256(bundle_path: str | Path) -> str:
             continue
         if not stat.S_ISREG(details.st_mode):
             raise PersonalFoundationError("foundation bundle contains a special file")
-        descriptor = os.open(entry, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        descriptor = os.open(
+            entry,
+            os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0),
+        )
         try:
             opened = os.fstat(descriptor)
             if (
@@ -2246,7 +2249,9 @@ def _copy_bundle_tree(
                 raise PersonalFoundationError(
                     "foundation bundle exceeds its private size bound"
                 )
-            input_flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            input_flags = (
+                os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+            )
             input_descriptor = -1
             output_descriptor = -1
             try:
@@ -2263,7 +2268,7 @@ def _copy_bundle_tree(
                     )
                 output_descriptor = os.open(
                     output,
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0),
                     0o600,
                 )
                 copied = 0

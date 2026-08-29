@@ -2081,8 +2081,14 @@ def _atomic_write_json(path: Path, payload: object) -> None:
 
 
 def _fsync_file(path: Path) -> None:
-    with path.open("rb") as handle:
-        os.fsync(handle.fileno())
+    flags = os.O_RDWR | getattr(os, "O_BINARY", 0)
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def _fsync_directory(path: Path) -> None:

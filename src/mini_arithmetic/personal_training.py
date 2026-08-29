@@ -1893,7 +1893,7 @@ def _make_private(path: Path, *, directory: bool) -> None:
 def _copy_private_regular_file(
     source: Path, destination: Path, *, maximum: int
 ) -> tuple[int, str]:
-    source_flags = os.O_RDONLY
+    source_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
     if hasattr(os, "O_NOFOLLOW"):
         source_flags |= os.O_NOFOLLOW
     source_fd = os.open(source, source_flags)
@@ -1909,7 +1909,9 @@ def _copy_private_regular_file(
                 "personal trainer artifact is not a bounded regular file"
             )
         destination_fd = os.open(
-            destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
+            destination,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0),
+            0o600,
         )
         digest = hashlib.sha256()
         written = 0
@@ -1948,7 +1950,7 @@ def _hash_regular_file(path: Path, *, maximum: int) -> tuple[int, str]:
 
 
 def _read_regular_file(path: Path, maximum: int) -> bytes:
-    flags = os.O_RDONLY
+    flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
     descriptor = os.open(path, flags)
