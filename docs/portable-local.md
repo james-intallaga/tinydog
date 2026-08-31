@@ -13,6 +13,17 @@ Install Python 3.10 or newer and Node.js 22.13 or newer (a currently supported
 LTS release is recommended), then download or clone
 this repository.
 
+Choose a model size from a numbered menu—no source code or configuration-file
+editing is required:
+
+```bash
+./tinydog.sh model
+```
+
+On Windows use `tinydog.cmd model` or `.\tinydog.ps1 model`. Choose 1–6 for
+20M, 50M, 80M, 100M, 200M, or 300M. The launcher remembers the choice. A
+direct form such as `tinydog.cmd model 50m` works too.
+
 On macOS or Linux, open a terminal in this folder and run:
 
 ```bash
@@ -53,29 +64,39 @@ computer can use, run `doctor`.
 | Mac without MLX but with PyTorch | PyTorch | MPS |
 | Other supported computer | PyTorch | CPU |
 
-`auto` chooses the 29.85M lightweight profile on every device. Accelerator
-detection alone cannot safely estimate free memory, and a standard personal
-training run temporarily needs both inference and training foundations. Choose
-the 320.93M profile explicitly only on a machine with ample memory:
+On a fresh installation, `auto` chooses the 20,003,456-parameter profile on
+every device. Accelerator detection alone cannot safely estimate free memory.
+An existing installation that already has the earlier 29.85M `portable-tiny`
+bundle stays on it, so an update never appears to erase that owner’s learning.
+
+Choose and remember a size with:
 
 ```bash
-./tinydog.sh start --model-size tiny
-./tinydog.sh start --model-size standard
+./tinydog.sh model 20m
+./tinydog.sh model 50m
+./tinydog.sh model 80m
+./tinydog.sh model 100m
+./tinydog.sh model 200m
+./tinydog.sh model 300m
 ```
 
-CPU mode is compatible, but training a 320.93M model on a CPU can be very slow.
-The tiny profile is the practical default there.
+Then start normally. `start --model-size 50m` is also available as a one-time
+override and does not change the remembered choice.
 
-A tiny complete-foundation update has a practical working-memory range of
-roughly 0.6–1.5 GB. On the PyTorch path, the standard BF16 bundle is expanded
-to FP32 for compute, and a personal update needs a separate training model,
+Approximate complete-update planning ranges are 0.6–1.2 GB (20M), 1.2–2.5 GB
+(50M), 1.8–3.5 GB (80M), 2.3–4.5 GB (100M), 4.5–8 GB (200M), and 7–12 GB
+(300M). They are estimates, not guarantees. PyTorch expands BF16 bundles to
+FP32 compute, and a personal update also needs a separate training model,
 gradients, AdamW state, activations, and temporary publication space while the
-live model keeps answering. The 320.93M standard profile can therefore exceed
-8–12 GB depending on the engine and device. This is a practical estimate, not
-a guarantee; use `tiny` if there is any doubt.
+live model keeps answering. Use 20M if there is any doubt.
+
+The older `tiny` (29.85M) and `standard` (320.93M) choices remain valid only
+for compatibility. They are different architectures, not aliases for 20M and
+300M. Switching size selects a separate brain and separate learned lineage;
+it does not convert or delete another size, and switching back resumes it.
 
 This release does not yet train inside Android, iOS/iPadOS, or a browser. A
-Chromebook may use the tiny CPU path through its Linux development environment
+Chromebook may use the 20M CPU path through its Linux development environment
 when that environment provides the required Python and Node.js versions.
 
 The default PyTorch package is installed from its normal package source.
@@ -213,9 +234,10 @@ mlm-prepare-data \
 ```
 
 The initializer checksum-verifies and copies the tokenizer; later changes to
-the tokenizer source cannot silently alter the bundle. Use
-`configs/portable-standard.json`, `portable-standard`, and `--model-size
-standard` for the 320.93M profile.
+the tokenizer source cannot silently alter the bundle. Any numbered profile
+uses the matching three-part identity, for example `configs/portable-100m.json`,
+`portable-100m`, and `--model-size 100m`. Legacy `tiny` and `standard` remain
+supported for existing bundles.
 
 Create `foundation-training.json`:
 
@@ -305,8 +327,8 @@ tinydog-serve \
   --db data/trained-foundation-conversations.db
 ```
 
-The exported directory must be named `portable-tiny` (or
-`portable-standard`) because `tinydog-serve` selects that name beneath
+The exported directory must be named `portable-SIZE` for the selected size
+(for example `portable-100m`) because `tinydog-serve` selects that name beneath
 `--model-root`. Export refuses an existing destination, verifies every
 checkpoint checksum plus its parent/tokenizer identity, records the training
 step and source hashes, and keeps the original random bundle unchanged. The

@@ -23,6 +23,7 @@ import numpy as np
 
 from .community_updates import publish_directory_no_replace
 from .hybrid_config import CONV, HybridConfig
+from .model_sizes import MODEL_SIZE_IDS, default_parameter_dtype
 from .scratch_tokenizer import (
     METADATA_FILENAME,
     TOKENIZER_FILENAME,
@@ -549,7 +550,7 @@ def create_portable_bundle(
     *,
     config_path: str | Path,
     backend: Literal["mlx", "torch"],
-    model_size: Literal["tiny", "standard"],
+    model_size: str,
     seed: int = 0,
     parameter_dtype: Literal["bfloat16", "float32"] | None = None,
     tokenizer_path: str | Path | None = None,
@@ -560,8 +561,8 @@ def create_portable_bundle(
         raise ValueError("seed must be a nonnegative integer")
     if backend not in {"mlx", "torch"}:
         raise ValueError("backend must be mlx or torch")
-    if model_size not in {"tiny", "standard"}:
-        raise ValueError("model_size must be tiny or standard")
+    if model_size not in MODEL_SIZE_IDS:
+        raise ValueError("portable model size is invalid")
     if parameter_dtype not in {None, "bfloat16", "float32"}:
         raise ValueError("parameter_dtype must be bfloat16 or float32")
     target = Path(destination).expanduser().resolve()
@@ -573,7 +574,7 @@ def create_portable_bundle(
         raise PortableBundleError(
             "portable HybridConfig must use the frozen 32K vocabulary"
         )
-    dtype = parameter_dtype or ("float32" if model_size == "tiny" else "bfloat16")
+    dtype = parameter_dtype or default_parameter_dtype(model_size)
     temporary: Path | None = Path(
         tempfile.mkdtemp(prefix=".tinydog-portable-", dir=target.parent)
     )
@@ -903,7 +904,7 @@ def load_portable_bundle(path: str | Path) -> PortableBundle:
     config = load_hybrid_config(root / CONFIG_FILENAME)
     if manifest.get("parameters") != config.expected_parameter_count():
         raise PortableBundleError("portable model parameter count is invalid")
-    if manifest.get("model_size") not in {"tiny", "standard"}:
+    if manifest.get("model_size") not in MODEL_SIZE_IDS:
         raise PortableBundleError("portable model size is invalid")
     if manifest.get("parameter_dtype") not in {"bfloat16", "float32"}:
         raise PortableBundleError("portable model dtype is invalid")

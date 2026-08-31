@@ -30,6 +30,7 @@ import uuid
 import numpy as np
 
 from .community_updates import publish_directory_no_replace
+from .model_sizes import MODEL_SIZE_IDS
 from .portable_bundle import (
     CONFIG_FILENAME,
     MANIFEST_FILENAME,
@@ -1267,7 +1268,7 @@ def initialize_foundation_bundle(
     *,
     config_path: str | Path,
     tokenizer_path: str | Path,
-    model_size: Literal["tiny", "standard"],
+    model_size: str,
     seed: int = 0,
     parameter_dtype: Literal["bfloat16", "float32"] | None = None,
 ) -> PortableBundle:
@@ -2176,7 +2177,7 @@ def parse_init_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--tokenizer", required=True, help="frozen ScratchTokenizer directory"
     )
-    parser.add_argument("--model-size", choices=("tiny", "standard"), required=True)
+    parser.add_argument("--model-size", choices=MODEL_SIZE_IDS, required=True)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--parameter-dtype", choices=("bfloat16", "float32"))
     return parser.parse_args(argv)

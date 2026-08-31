@@ -5,6 +5,14 @@ downloads or authorizes imported model weights.
 
 | File | Intended use | Status |
 |---|---|---|
+| `portable-20m.json` | Portable typed-conversation learner, minimum-memory preset | Exact size 20,003,456 parameters; 4,096-token context. This is the fresh-install automatic choice. |
+| `portable-50m.json` | Portable typed-conversation learner, lightweight preset | Exact size 49,471,872 parameters; 4,096-token context. |
+| `portable-80m.json` | Portable typed-conversation learner, balanced lightweight preset | Exact size 79,467,520 parameters; 4,096-token context. |
+| `portable-100m.json` | Portable typed-conversation learner, mid-size preset | Exact size 99,819,648 parameters; 4,096-token context. Do not confuse it with the separate legacy `100m.json`. |
+| `portable-200m.json` | Portable typed-conversation learner, large-local preset | Exact size 199,810,048 parameters; 4,096-token context. |
+| `portable-300m.json` | Portable typed-conversation learner, high-memory preset | Exact size 297,875,456 parameters; 4,096-token context. Do not confuse it with the separate legacy `300m.json`. |
+| `portable-tiny.json` | Earlier portable typed-conversation learner | Exact size 29,851,776 parameters. Retained as a compatibility identity for existing bundles and learning lineages. |
+| `portable-standard.json` | Earlier portable typed-conversation learner | Exact size 320,929,536 parameters. Retained as a compatibility identity for existing bundles and learning lineages. |
 | `300m.json` | Live arithmetic Transformer and apprenticeship service | Exact size 301,325,312 parameters. It uses the 264-ID byte tokenizer and this project's random/continually consolidated checkpoints. |
 | `100m.json` | Smaller legacy arithmetic Transformer | Exact size 99,708,672 parameters with the same 264-ID tokenizer. |
 | `hybrid-scratch.example.json` | Staged text pretraining and assistant-only SFT for `HybridLM` | Exact size 320,929,536 parameters with the separate 32,768-ID scratch tokenizer. It is an untrained example; replace the all-zero tokenizer digest with the locally built artifact's real SHA-256 before running. |

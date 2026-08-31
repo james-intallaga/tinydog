@@ -10,6 +10,10 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from mini_arithmetic.hybrid_config import CONV, HybridConfig  # noqa: E402
+from mini_arithmetic.model_sizes import (  # noqa: E402
+    MODEL_SIZE_PRESETS,
+    PUBLIC_MODEL_SIZE_IDS,
+)
 from mini_arithmetic.portable_bundle import (  # noqa: E402
     MANIFEST_FILENAME,
     PORTABLE_STATE_FORMAT,
@@ -91,6 +95,25 @@ def _new_bundle(tmp_path: Path) -> PortableBundle:
         seed=23,
         parameter_dtype="float32",
     )
+
+
+@pytest.mark.parametrize("model_size", PUBLIC_MODEL_SIZE_IDS)
+def test_numbered_model_size_labels_round_trip_with_their_default_dtype(
+    tmp_path: Path,
+    model_size: str,
+) -> None:
+    config_path, _ = _config_file(tmp_path)
+    bundle = create_portable_bundle(
+        tmp_path / f"portable-{model_size}",
+        config_path=config_path,
+        backend="torch",
+        model_size=model_size,
+        seed=7,
+    )
+
+    loaded = load_portable_bundle(bundle.root)
+    assert loaded.model_size == model_size
+    assert loaded.parameter_dtype == MODEL_SIZE_PRESETS[model_size].parameter_dtype
 
 
 def test_random_portable_bundle_loads_in_torch_without_external_weights(

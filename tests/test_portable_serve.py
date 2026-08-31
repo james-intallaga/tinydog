@@ -203,12 +203,20 @@ def test_five_ordinary_typed_turns_become_private_dialogue_lessons(
     assert coordinator.closed is True
 
 
-def test_auto_size_uses_tiny_without_guessing_accelerator_memory() -> None:
-    assert choose_model_size("auto", _selection("cpu")) == "tiny"
+def test_auto_size_uses_20m_without_guessing_accelerator_memory(
+    tmp_path: Path,
+) -> None:
+    assert choose_model_size("auto", _selection("cpu"), model_root=tmp_path) == "20m"
     for accelerator in ("cuda", "rocm", "xpu", "mps"):
-        assert choose_model_size("auto", _selection(accelerator)) == "tiny"
+        assert (
+            choose_model_size("auto", _selection(accelerator), model_root=tmp_path)
+            == "20m"
+        )
+    (tmp_path / "portable-tiny").mkdir()
+    assert choose_model_size("auto", _selection("cpu"), model_root=tmp_path) == "tiny"
     assert choose_model_size("tiny", _selection("cuda")) == "tiny"
     assert choose_model_size("standard", _selection("cuda")) == "standard"
+    assert choose_model_size("200m", _selection("cpu")) == "200m"
 
 
 def test_private_adapter_profiles_are_namespaced_by_runtime_identity() -> None:

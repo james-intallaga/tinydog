@@ -21,11 +21,18 @@ import socket
 import stat
 import subprocess
 import sys
+import tempfile
 import time
 from typing import Callable, Mapping, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from .model_sizes import (
+    MODEL_SIZE_CHOICES,
+    MODEL_SIZE_PRESETS,
+    PUBLIC_MODEL_SIZE_IDS,
+    normalize_model_size,
+)
 from .portable import BackendName, recommended_backend_for_host
 
 
@@ -360,14 +367,115 @@ def _backend_from_marker(root: Path, requested: BackendName) -> str:
 def _configured_model_size(requested: str, settings: Mapping[str, str]) -> str:
     """Honor the private `.env` default unless the command line is explicit."""
 
-    if requested not in {"auto", "tiny", "standard"}:
-        raise BootstrapError("Model size must be auto, tiny, or standard.")
+    try:
+        requested = normalize_model_size(requested)
+    except ValueError as error:
+        raise BootstrapError(str(error).capitalize() + ".") from error
     if requested != "auto":
         return requested
-    configured = settings.get("TINYDOG_MODEL_SIZE", "auto").strip().lower()
-    if configured not in {"auto", "tiny", "standard"}:
-        raise BootstrapError("TINYDOG_MODEL_SIZE must be auto, tiny, or standard.")
-    return configured
+    configured = settings.get("TINYDOG_MODEL_SIZE", "auto")
+    try:
+        return normalize_model_size(configured)
+    except ValueError as error:
+        raise BootstrapError(
+            "TINYDOG_MODEL_SIZE must be auto or one of: "
+            + ", ".join(PUBLIC_MODEL_SIZE_IDS)
+            + "."
+        ) from error
+
+
+def _dotenv_key(raw_line: str) -> str | None:
+    """Return the assignment key for one simple dotenv line, if present."""
+
+    line = raw_line.strip()
+    if not line or line.startswith("#"):
+        return None
+    if line.startswith("export "):
+        line = line[7:].lstrip()
+    key, separator, _ = line.partition("=")
+    return key.strip() if separator else None
+
+
+def _write_model_size_setting(root: Path, model_size: str | None) -> None:
+    """Atomically update only the remembered model choice in private ``.env``."""
+
+    path = root / ".env"
+    if path.exists() or path.is_symlink():
+        _read_dotenv(path)  # Enforce the existing symlink/type/mode boundary.
+        lines = path.read_text(encoding="utf-8").splitlines()
+    else:
+        lines = []
+    retained = [line for line in lines if _dotenv_key(line) != "TINYDOG_MODEL_SIZE"]
+    if model_size is not None:
+        retained.append(f"TINYDOG_MODEL_SIZE={model_size}")
+    if not retained and not path.exists():
+        return
+    payload = ("\n".join(retained).rstrip() + "\n").encode("utf-8")
+    descriptor, temporary_name = tempfile.mkstemp(prefix=".env.tinydog-", dir=root)
+    temporary = Path(temporary_name)
+    try:
+        if os.name != "nt":
+            os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb", closefd=True) as handle:
+            descriptor = -1
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        if os.name != "nt":
+            path.chmod(0o600)
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        temporary.unlink(missing_ok=True)
+
+
+def configure_model_size(
+    root: Path,
+    requested: str | None = None,
+    *,
+    input_fn: Callable[[str], str] = input,
+) -> int:
+    """Remember a numbered portable brain size without requiring file editing."""
+
+    if requested is None:
+        current = _read_dotenv(root / ".env").get("TINYDOG_MODEL_SIZE", "auto")
+        print(f"Current choice: {current}")
+        print("Choose the brain size used on the next start:")
+        for index, identifier in enumerate(PUBLIC_MODEL_SIZE_IDS, start=1):
+            preset = MODEL_SIZE_PRESETS[identifier]
+            print(f"  {index}. {identifier.upper():>4}  {preset.description}")
+        print(
+            "  A. AUTO  20M on a new install; preserves an existing legacy Tiny model"
+        )
+        try:
+            requested = input_fn("Choice [1-6 or A]: ").strip()
+        except (EOFError, KeyboardInterrupt) as error:
+            raise BootstrapError(
+                "No model was selected. Run `tinydog model 20m` to choose directly."
+            ) from error
+        menu = {
+            str(index): identifier
+            for index, identifier in enumerate(PUBLIC_MODEL_SIZE_IDS, start=1)
+        }
+        requested = menu.get(requested.lower(), requested)
+        if requested.lower() == "a":
+            requested = "auto"
+    try:
+        selected = normalize_model_size(requested)
+    except ValueError as error:
+        raise BootstrapError(str(error).capitalize() + ".") from error
+    _write_model_size_setting(root, None if selected == "auto" else selected)
+    if selected == "auto":
+        print("Automatic model choice restored. It will apply on the next start.")
+    else:
+        preset = MODEL_SIZE_PRESETS[selected]
+        print(
+            f"{selected.upper()} selected ({preset.parameters:,} parameters). "
+            "It will apply on the next start."
+        )
+    print("Existing models and their learning were not changed or deleted.")
+    return 0
 
 
 def _runtime_environment(
@@ -784,7 +892,12 @@ def show_status(*, as_json: bool = False) -> int:
         return 0
     learning = payload.get("learning")
     model = payload.get("model")
-    if not isinstance(learning, dict) or not isinstance(model, dict):
+    portable = payload.get("portable")
+    if (
+        not isinstance(learning, dict)
+        or not isinstance(model, dict)
+        or not isinstance(portable, dict)
+    ):
         raise BootstrapError("The local status response is incomplete.")
     pending = learning.get("qualifying_pending", 0)
     threshold = learning.get("lesson_threshold", 5)
@@ -794,6 +907,12 @@ def show_status(*, as_json: bool = False) -> int:
     print(
         f"Model:    {model.get('backend', 'unknown')}/{model.get('device', 'unknown')}"
     )
+    model_size = portable.get("model_size", "unknown")
+    parameters = portable.get("parameters")
+    parameter_text = (
+        f" ({parameters:,} parameters)" if isinstance(parameters, int) else ""
+    )
+    print(f"Size:     {str(model_size).upper()}{parameter_text}")
     active = learning.get("active_foundation_id")
     print(f"Active:   {active if isinstance(active, str) and active else 'local base'}")
     print(
@@ -1299,9 +1418,9 @@ def _parser() -> argparse.ArgumentParser:
     start = subparsers.choices["start"]
     start.add_argument(
         "--model-size",
-        choices=("auto", "tiny", "standard"),
+        choices=MODEL_SIZE_CHOICES,
         default="auto",
-        help="choose automatically, a lightweight pilot, or the standard 320.9M model",
+        help="choose auto, 20m, 50m, 80m, 100m, 200m, or 300m",
     )
     start.add_argument(
         "--legacy-mlx",
@@ -1310,7 +1429,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     start.add_argument(
         "--model-root",
-        help="directory containing portable-tiny or portable-standard",
+        help="directory containing portable-SIZE model folders",
     )
     start.add_argument(
         "--personal-root",
@@ -1321,6 +1440,14 @@ def _parser() -> argparse.ArgumentParser:
     start.add_argument("--weights", default=DEFAULT_WEIGHTS, help=argparse.SUPPRESS)
     check = subparsers.add_parser("doctor")
     check.add_argument("--backend", choices=("auto", "mlx", "torch"), default="auto")
+    model = subparsers.add_parser(
+        "model", help="choose and remember a model size without editing files"
+    )
+    model.add_argument(
+        "size",
+        nargs="?",
+        help="20m, 50m, 80m, 100m, 200m, 300m, or auto",
+    )
     status = subparsers.add_parser("status", help="show local learning progress")
     status.add_argument("--json", action="store_true", help="print the complete status")
     subparsers.add_parser("rollback", help="return to the previous personal foundation")
@@ -1372,6 +1499,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if command == "doctor":
             return doctor(PROJECT_ROOT, args.backend)
+        if command == "model":
+            return configure_model_size(PROJECT_ROOT, args.size)
         if command == "status":
             return show_status(as_json=args.json)
         if command == "rollback":

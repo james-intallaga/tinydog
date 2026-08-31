@@ -23,6 +23,7 @@ from mini_arithmetic.bootstrap import (
     _venv_python,
     build_setup_plan,
     build_start_commands,
+    configure_model_size,
     erase_personal_learning,
     reset_personal_learning,
     restore_personal_learning,
@@ -92,11 +93,53 @@ def test_external_stop_signal_uses_and_restores_orderly_cleanup(monkeypatch) -> 
 
 
 def test_model_size_uses_env_default_but_explicit_cli_wins() -> None:
-    settings = {"TINYDOG_MODEL_SIZE": "standard"}
-    assert _configured_model_size("auto", settings) == "standard"
-    assert _configured_model_size("tiny", settings) == "tiny"
+    settings = {"TINYDOG_MODEL_SIZE": "50M"}
+    assert _configured_model_size("auto", settings) == "50m"
+    assert _configured_model_size("200m", settings) == "200m"
     with pytest.raises(BootstrapError, match="TINYDOG_MODEL_SIZE"):
         _configured_model_size("auto", {"TINYDOG_MODEL_SIZE": "giant"})
+
+
+def test_model_command_remembers_choice_without_rewriting_other_settings(
+    tmp_path: Path,
+) -> None:
+    dotenv = tmp_path / ".env"
+    dotenv.write_text(
+        "# private settings\nOTHER=value\nTINYDOG_MODEL_SIZE=20m\n"
+        "export TINYDOG_MODEL_SIZE=80m\n",
+        encoding="utf-8",
+    )
+
+    assert configure_model_size(tmp_path, "50") == 0
+
+    contents = dotenv.read_text(encoding="utf-8")
+    assert "# private settings" in contents
+    assert "OTHER=value" in contents
+    assert contents.count("TINYDOG_MODEL_SIZE=") == 1
+    assert _read_dotenv(dotenv)["TINYDOG_MODEL_SIZE"] == "50m"
+    if os.name != "nt":
+        assert dotenv.stat().st_mode & 0o077 == 0
+
+
+def test_model_command_menu_and_auto_reset(tmp_path: Path) -> None:
+    assert configure_model_size(tmp_path, input_fn=lambda _prompt: "4") == 0
+    assert _read_dotenv(tmp_path / ".env")["TINYDOG_MODEL_SIZE"] == "100m"
+
+    assert configure_model_size(tmp_path, "auto") == 0
+    assert "TINYDOG_MODEL_SIZE" not in _read_dotenv(tmp_path / ".env")
+
+
+def test_model_command_refuses_linked_env(tmp_path: Path) -> None:
+    target = tmp_path / "outside"
+    target.write_text("SAFE=yes\n", encoding="utf-8")
+    try:
+        (tmp_path / ".env").symlink_to(target)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks are unavailable")
+
+    with pytest.raises(BootstrapError, match="regular, unlinked"):
+        configure_model_size(tmp_path, "20m")
+    assert target.read_text(encoding="utf-8") == "SAFE=yes\n"
 
 
 def test_runtime_forces_local_ui_telemetry_off(monkeypatch) -> None:
@@ -400,6 +443,7 @@ def test_status_and_rollback_use_only_fixed_local_ui_routes(
                     "rollback_available": True,
                 },
                 "model": {"backend": "torch", "device": "cpu"},
+                "portable": {"model_size": "50m", "parameters": 49_471_872},
             }
         return {"state": "ready", "active_foundation_id": "foundation-base"}
 
@@ -409,6 +453,7 @@ def test_status_and_rollback_use_only_fixed_local_ui_routes(
     assert calls == [("/api/status", "GET"), ("/api/rollback", "POST")]
     output = capsys.readouterr().out
     assert "3/5 eligible typed turns" in output
+    assert "50M (49,471,872 parameters)" in output
     assert "Rollback complete" in output
 
 

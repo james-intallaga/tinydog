@@ -26,6 +26,12 @@ from typing import Any, Mapping, Protocol, Sequence
 from urllib.parse import parse_qs, urlparse
 
 from .apprenticeship import ApprenticeshipStore, TRUSTED_DIALOGUE_BOOTSTRAP_PROMPT
+from .model_sizes import (
+    DEFAULT_NEW_MODEL_SIZE,
+    MODEL_SIZE_CHOICES,
+    MODEL_SIZE_PRESETS,
+    normalize_model_size,
+)
 from .personal_foundation import (
     PersonalFoundationError,
     PersonalFoundationTrainingConfig,
@@ -100,13 +106,23 @@ def _jsonable(value: Any) -> Any:
     return value
 
 
-def choose_model_size(requested: str, selection: BackendSelection) -> str:
-    """Choose a portable default without guessing available accelerator memory."""
+def choose_model_size(
+    requested: str,
+    selection: BackendSelection,
+    *,
+    model_root: str | Path | None = None,
+) -> str:
+    """Choose a safe default while preserving an existing legacy installation."""
 
-    if requested not in {"auto", "tiny", "standard"}:
-        raise ValueError("model size must be auto, tiny, or standard")
+    requested = normalize_model_size(requested)
     del selection
-    return "tiny" if requested == "auto" else requested
+    if requested != "auto":
+        return requested
+    if model_root is not None:
+        parent = Path(model_root).expanduser()
+        if (parent / MODEL_SIZE_PRESETS["tiny"].directory_name).is_dir():
+            return "tiny"
+    return DEFAULT_NEW_MODEL_SIZE
 
 
 def _resolve_local_path(root: Path, value: str | Path) -> Path:
@@ -396,6 +412,7 @@ class PortableChatService:
             "portable": {
                 **self.selection.as_dict(),
                 "model_size": self.bundle.model_size,
+                "parameters": self.bundle.config.expected_parameter_count(),
                 "learning_mode": self.learning_mode,
                 "bundle_created_this_start": self.bundle_created,
                 "scratch_only": True,
@@ -656,10 +673,15 @@ def build_service(
     selection = select_backend(backend)  # type: ignore[arg-type]
     if not selection.ready or selection.backend not in {"mlx", "torch"}:
         raise PortableServeError(selection.reason)
-    resolved_size = choose_model_size(model_size, selection)
-    config_path = root / "configs" / f"portable-{resolved_size}.json"
     model_parent = _resolve_local_path(root, model_root)
-    model_directory = model_parent / f"portable-{resolved_size}"
+    resolved_size = choose_model_size(
+        model_size,
+        selection,
+        model_root=model_parent,
+    )
+    preset = MODEL_SIZE_PRESETS[resolved_size]
+    config_path = root / "configs" / preset.config_filename
+    model_directory = model_parent / preset.directory_name
     if learning_mode == "foundation":
         base_training_config: (
             PersonalTrainingConfig | PersonalFoundationTrainingConfig
@@ -741,9 +763,7 @@ def _parser() -> argparse.ArgumentParser:
         description="Run a private, portable tinydog.ai conversational learner."
     )
     parser.add_argument("--backend", choices=("auto", "mlx", "torch"), default="auto")
-    parser.add_argument(
-        "--model-size", choices=("auto", "tiny", "standard"), default="auto"
-    )
+    parser.add_argument("--model-size", choices=MODEL_SIZE_CHOICES, default="auto")
     parser.add_argument("--db", default="data/personal-conversations.db")
     parser.add_argument("--model-root", default="data/models")
     parser.add_argument(

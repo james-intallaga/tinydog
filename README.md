@@ -42,6 +42,20 @@ No language-model checkpoint or conversation corpus is downloaded by the normal 
 
 ### Start the app
 
+Optional: choose a brain size first. This opens a numbered menu and remembers
+the answer, so no configuration file or source code needs editing:
+
+| Operating system | Command |
+| --- | --- |
+| macOS / Linux | `./tinydog.sh model` |
+| Windows Command Prompt | `tinydog.cmd model` |
+| Windows PowerShell | `.\tinydog.ps1 model` |
+
+Choose 1–6 for 20M, 50M, 80M, 100M, 200M, or 300M. The 20M choice is
+recommended for an older, low-memory, or CPU-only computer. You can also set
+it directly, for example `./tinydog.sh model 50m` or `tinydog.cmd model 50m`.
+The choice takes effect on the next start.
+
 Open a terminal in this directory and run the launcher for your operating system:
 
 | Operating system | Command |
@@ -136,7 +150,7 @@ For a meaningful improvement check, keep a small set of prompts that are **not**
 | Intel macOS, or Apple Silicon with explicit PyTorch | Yes | PyTorch | Automatic on Intel; on Apple Silicon use `--backend torch`; probes MPS, then CPU |
 | Windows 10/11 | Yes | PyTorch | Probes CUDA, Intel XPU, then CPU |
 | Linux with a compatible PyTorch wheel | Yes | PyTorch | Probes CUDA/ROCm through PyTorch, Intel XPU, then CPU |
-| Linux CPU-only | Yes | PyTorch CPU | Use the tiny model and expect slower updates |
+| Linux CPU-only | Yes | PyTorch CPU | Use the 20M model and expect slower updates |
 | Chromebook | Conditional | PyTorch in a supported Linux environment | Browser-only ChromeOS training is not implemented |
 | Android / iOS | No native training app | — | A desktop-class Python and Node.js environment is required |
 
@@ -156,22 +170,32 @@ To inspect a specific engine, add `--backend mlx` or `--backend torch`.
 
 | Choice | Canonical parameters | Context | Stored parameter dtype | Approximate one-file weights | Intended use |
 | --- | ---: | ---: | --- | ---: | --- |
-| `tiny` | 29,851,776 | 4,096 tokens | FP32 | 114 MiB | Default; practical local experiment |
-| `standard` | 320,929,536 | 32,768 tokens | BF16 | 612 MiB | Research hardware with ample RAM/storage |
-| `auto` | Selects `tiny` | — | — | — | Safe default; it does not auto-upgrade on a large GPU |
+| `20m` | 20,003,456 | 4,096 tokens | FP32 | 76 MiB | Minimum memory; recommended starting point |
+| `50m` | 49,471,872 | 4,096 tokens | FP32 | 189 MiB | Lightweight |
+| `80m` | 79,467,520 | 4,096 tokens | BF16 | 152 MiB | Balanced lightweight |
+| `100m` | 99,819,648 | 4,096 tokens | BF16 | 190 MiB | Mid-size |
+| `200m` | 199,810,048 | 4,096 tokens | BF16 | 381 MiB | Large local |
+| `300m` | 297,875,456 | 4,096 tokens | BF16 | 568 MiB | High-memory research |
+| `auto` | Selects `20m` on a fresh install | — | — | — | Safe default; keeps an existing legacy Tiny installation on Tiny |
 
-Choose explicitly with `start --model-size tiny` or `start --model-size standard`.
+Run `tinydog model` for the menu, or choose directly with `tinydog model 50m`.
+For a one-time override that is not remembered, use `start --model-size 50m`.
+The older `tiny` (29,851,776) and `standard` (320,929,536) identities remain
+accepted so existing bundles and personal learning histories still work; they
+are not aliases for 20M and 300M.
 
 Resource figures are workload- and backend-dependent:
 
-- a complete tiny update is commonly practical in roughly 0.6–1.5 GB of working memory;
-- standard PyTorch training expands BF16 parameters to FP32 compute and also needs a live model, isolated training model, gradients, two Adam moment buffers, activations, and temporary export space; it can exceed 8–12 GB;
-- the personal registry retains base/current/previous. After several generations, the steady model lineage is roughly 456 MiB for tiny or 2.4 GiB for standard, before temporary files and dependencies;
+- approximate planning ranges for a complete update are 0.6–1.2 GB (20M), 1.2–2.5 GB (50M), 1.8–3.5 GB (80M), 2.3–4.5 GB (100M), 4.5–8 GB (200M), and 7–12 GB (300M); these are estimates, not guarantees;
+- PyTorch expands BF16 bundles to FP32 compute and also needs a live model, isolated training model, gradients, two Adam moment buffers, activations, and temporary export space;
+- the personal registry retains the base, current, and previous generations, so steady storage after several updates is several times the one-file figure and atomic publication needs additional temporary space;
 - for the explicit standard corpus trainer, one FP32 model plus two FP32 Adam moments is roughly 3.6 GiB per resume checkpoint; the example retention plan can occupy about 10.8 GiB at completion and briefly need another checkpoint’s space during atomic publication;
 - Python, Node.js, GPU runtimes, and package caches can add several GB;
 - the conversation database grows with use and has no automatic retention window.
 
-Start with `tiny`. Use `standard` only after confirming available memory, storage, training time, and backend support.
+Start with `20m`. Move upward only after confirming available memory, storage,
+training time, and backend support. A larger random model is not automatically
+smarter; it mainly has more capacity and costs more to train.
 
 ## Launcher reference
 
@@ -179,7 +203,8 @@ The examples below use the macOS/Linux prefix `./tinydog.sh`. On Windows, substi
 
 | Command | Purpose | Important options / constraints |
 | --- | --- | --- |
-| `./tinydog.sh start` | Set up if needed and start learner/UI; prints the browser URL | `--backend auto\|mlx\|torch`, `--model-size auto\|tiny\|standard`, `--model-root PATH`, `--personal-root PATH`, `--db PATH`, `--no-realtime`, `--torch-index-url URL`, `--no-ui`, `--dry-run`, `--legacy-mlx` |
+| `./tinydog.sh model` | Open the numbered 20M–300M menu and remember the choice | Optional direct value: `20m\|50m\|80m\|100m\|200m\|300m\|auto` |
+| `./tinydog.sh start` | Set up if needed and start learner/UI; prints the browser URL | `--backend auto\|mlx\|torch`, `--model-size auto\|20m\|50m\|80m\|100m\|200m\|300m`, `--model-root PATH`, `--personal-root PATH`, `--db PATH`, `--no-realtime`, `--torch-index-url URL`, `--no-ui`, `--dry-run`, `--legacy-mlx` |
 | `./tinydog.sh setup` | Create the virtual environment and install Python/npm dependencies | `--backend auto\|mlx\|torch`, `--torch-index-url URL`, `--no-realtime`, `--no-ui`, `--dry-run` |
 | `./tinydog.sh doctor` | Report platform, Python, Node, engine, accelerator, and paths | `--backend auto\|mlx\|torch` |
 | `./tinydog.sh status` | Show progress and active generation | App must be running; add `--json` for structured output |
@@ -195,7 +220,7 @@ The examples below use the macOS/Linux prefix `./tinydog.sh`. On Windows, substi
 
 `start` accepts:
 
-- `--model-root PATH`: parent directory containing `portable-tiny/` and/or `portable-standard/`;
+- `--model-root PATH`: parent directory containing `portable-SIZE/` model folders;
 - `--personal-root PATH`: owner-specific foundation registry;
 - `--db PATH`: owner-specific SQLite conversation database.
 
@@ -295,7 +320,7 @@ The UI uses a fresh, process-local token to reach the learner through its server
 
 | Location | Contents |
 | --- | --- |
-| `data/models/portable-tiny/` or `portable-standard/` | Deterministic immutable initial foundation |
+| `data/models/portable-SIZE/` | Deterministic immutable initial foundation for each selected size |
 | `data/personal-foundations/profiles/…` | Personal base/current/previous foundation generations and manifests |
 | `data/personal-conversations.db` | Plaintext SQLite messages, trusted training examples, progress, and telemetry |
 | `data/personal-conversations.db-wal` / `-shm` | SQLite sidecars when present |
@@ -479,7 +504,9 @@ Export refuses incomplete runs and refuses an existing destination:
 
 `tinydog-foundation-export --bundle data/foundation-parent/portable-tiny --checkpoint data/foundation-runs/my-tiny-run --destination trained-models/portable-tiny`
 
-The destination name matters: `--model-root trained-models` expects its selected bundle at `trained-models/portable-tiny` or `trained-models/portable-standard`.
+The destination name matters: `--model-root trained-models` expects the selected
+bundle at `trained-models/portable-SIZE`, such as `portable-50m`. Legacy
+`portable-tiny` and `portable-standard` names remain valid.
 
 ### 9. Launch the exported model through the normal UI
 
@@ -509,7 +536,7 @@ TinyDog works without a `.env` file. To customize research settings, copy the do
 
 The template documents the supported personal-foundation and native research variables. Common settings include:
 
-- `TINYDOG_MODEL_SIZE=tiny` or `standard`;
+- `TINYDOG_MODEL_SIZE=20m`, `50m`, `80m`, `100m`, `200m`, or `300m` (the `tinydog model` command updates this safely for you);
 - `MLM_PERSONAL_FOUNDATION_AUTO=0` to disable automatic updates without disabling storage;
 - `MLM_PERSONAL_FOUNDATION_DIR=…` to change the personal foundation location;
 - `MLM_PERSONAL_FOUNDATION_MAX_REPLAY_EXAMPLES=8` to change the older-example replay count within the hard safety cap;
@@ -530,7 +557,7 @@ Do not casually set `MLM_UNTRAINED_NATIVE_CONFIG`. It enables a transport diagno
 | Training stays below five | Only distinct, trusted, typed, context-sized replies count; duplicates, media events, and oversized targets do not |
 | Training failed | Run `status`; the previous active generation remains in service. Correct the error and wait for the retry window or restart |
 | TinyDog says nonsense | This is expected from random weights. Use consistent short examples, compare held-out prompts, and rollback regressions |
-| Update runs out of memory | Stop other heavy programs, select `tiny`, reduce research settings, or use a better-supported accelerator |
+| Update runs out of memory | Stop other heavy programs, run `tinydog model 20m`, restart, or use a better-supported accelerator; TinyDog never silently changes size |
 | `rollback` is unavailable | There is no previous generation, or a training update is active |
 | `restore` refuses to overwrite | Reset the newer active state first, then restore the chosen backup |
 | Camera/microphone path is disconnected on Torch | The portable supported path is typed chat; MLX media research is optional and Apple-specific |
@@ -615,8 +642,8 @@ Current continuous integration exercises the portable PyTorch path on Ubuntu and
 | `src/mini_arithmetic/personal_foundation.py` | Backend-neutral five-turn coordinator, lineage, validation, and telemetry |
 | `src/mini_arithmetic/torch_foundation_train.py` | Explicit audited-corpus PyTorch trainer, initializer, and exporter |
 | `interface/` | Local Next.js pet UI and fixed backend proxy |
-| `configs/portable-tiny.json` | Tiny architecture |
-| `configs/portable-standard.json` | Standard architecture |
+| `configs/portable-{20m,50m,80m,100m,200m,300m}.json` | Numbered portable architecture presets |
+| `configs/portable-tiny.json`, `configs/portable-standard.json` | Earlier compatibility architectures |
 | `.env.example` | Supported optional local configuration |
 | `configs/legacy-research.env.example` | Explicit legacy/research configuration boundary |
 | `tests/` | Python unit, safety, portability, and integration tests |
