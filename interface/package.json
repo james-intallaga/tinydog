@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@ricky0123/vad-web": "^0.0.30",
-    "@types/node": "^20",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "geist": "1.7.2",
